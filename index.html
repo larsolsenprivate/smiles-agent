@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SMILES Molekyleviser</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f7f8;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --accent: #2563eb;
+        --border: #e5e7eb;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #0f1115;
+          --card: #181b22;
+          --text: #f3f4f6;
+          --muted: #aeb4bf;
+          --accent: #60a5fa;
+          --border: #2b313c;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .wrap {
+        max-width: 900px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px;
+      }
+
+      h1 {
+        margin: 0 0 12px;
+        font-size: 1.5rem;
+      }
+
+      p {
+        margin: 0 0 14px;
+        color: var(--muted);
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      input {
+        flex: 1;
+        min-width: 260px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 11px 12px;
+        background: transparent;
+        color: var(--text);
+        font-size: 1rem;
+      }
+
+      button {
+        border: none;
+        border-radius: 10px;
+        padding: 11px 16px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+
+      button:hover {
+        filter: brightness(1.05);
+      }
+
+      #status {
+        margin-top: 10px;
+        min-height: 1.3em;
+        color: var(--muted);
+      }
+
+      #drawing {
+        margin-top: 16px;
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+        min-height: 360px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: auto;
+        padding: 12px;
+      }
+
+      #drawing svg {
+        max-width: 100%;
+        height: auto;
+      }
+
+      #drawing img {
+        max-width: 100%;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="card">
+        <h1>SMILES -> Molekylestruktur</h1>
+        <p>Indsæt en SMILES-streng og få en 2D figur af molekylet.</p>
+        <div class="row">
+          <input
+            id="smilesInput"
+            type="text"
+            placeholder="Eksempel: C1=CC=CC=C1 (benzen)"
+            value="CC(=O)OC1=CC=CC=C1C(=O)O"
+          />
+          <button id="drawButton" type="button">Vis molekyle</button>
+        </div>
+        <div id="status">Klar.</div>
+        <div id="drawing" aria-live="polite"></div>
+      </section>
+    </main>
+
+    <script>
+      const smilesInput = document.getElementById("smilesInput");
+      const drawButton = document.getElementById("drawButton");
+      const statusEl = document.getElementById("status");
+      const drawingEl = document.getElementById("drawing");
+
+      function setStatus(message, isError = false) {
+        statusEl.textContent = message;
+        statusEl.style.color = isError ? "#dc2626" : "";
+      }
+
+      async function drawSmilesWithApi(smiles) {
+        const url = `/api/render?smiles=${encodeURIComponent(smiles)}`;
+
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.error || "Kunne ikke rendere molekyle.");
+          }
+
+          const svgText = await response.text();
+          drawingEl.innerHTML = svgText;
+          setStatus("Molekyle vist.");
+        } catch (error) {
+          drawingEl.innerHTML = "";
+          setStatus(error.message || "Kunne ikke hente struktur.", true);
+        }
+      }
+
+      async function drawSmiles() {
+        const smiles = smilesInput.value.trim();
+        if (!smiles) {
+          drawingEl.innerHTML = "";
+          setStatus("Indtast en SMILES-streng.", true);
+          return;
+        }
+
+        setStatus("Renderer molekyle...");
+        drawingEl.innerHTML = "";
+        await drawSmilesWithApi(smiles);
+      }
+
+      drawButton.addEventListener("click", drawSmiles);
+      smilesInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+          drawSmiles();
+        }
+      });
+
+      drawSmiles();
+    </script>
+  </body>
+</html>
