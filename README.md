@@ -49,8 +49,6 @@ Then open:
 
 ## Troubleshooting
 
-### `ModuleNotFoundError: No module named 'flask'`
-
 You are most likely not running inside the virtual environment. Confirm that `(.venv)` is visible in your terminal, then reinstall dependencies:
 
 ```bash
